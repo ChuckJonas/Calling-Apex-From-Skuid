@@ -4,9 +4,4 @@
     <availableInTouch>false</availableInTouch>
     <confirmationTokenRequired>false</confirmationTokenRequired>
     <label>DF_SkuidDemo</label>
-    <packageVersions>
-        <majorNumber>6</majorNumber>
-        <minorNumber>8</minorNumber>
-        <namespace>skuid</namespace>
-    </packageVersions>
 </ApexPage>
