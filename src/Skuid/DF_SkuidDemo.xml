@@ -1,0 +1,210 @@
+<skuidpage unsavedchangeswarning="yes" showsidebar="true" showheader="true" tabtooverride="Account">
+   <models>
+      <model id="Contact" limit="20" query="true" createrowifnonefound="false" sobject="Contact" doclone="" type="">
+         <fields>
+            <field id="FirstName"/>
+            <field id="LastName"/>
+            <field id="Email"/>
+            <field id="Profile_Picture__c"/>
+            <field id="Name"/>
+         </fields>
+         <conditions>
+            <condition type="param" value="id" field="Id" operator="=" enclosevalueinquotes="true" novaluebehavior=""/>
+         </conditions>
+         <actions/>
+      </model>
+   </models>
+   <components>
+      <pagetitle model="Contact">
+         <maintitle>
+            <template>{{Name}}</template>
+         </maintitle>
+         <actions>
+            <action type="custom" label="Javascript Remoting" snippet="getGravatarJsRemote" icon="sk-icon-photoview">
+               <actions/>
+            </action>
+            <action type="custom" label="SOAP" snippet="getGravatarSOAP"/>
+            <action type="custom" label="REST" snippet="getGravatarREST"/>
+            <action type="custom" label="Invocable Method" snippet="getGravatarInvocable"/>
+         </actions>
+         <subtitle>Import Gravatar</subtitle>
+      </pagetitle>
+      <template multiple="false" model="Contact">
+         <contents>&lt;img src="{{{Profile_Picture__c}}}"&gt;</contents>
+         <renderconditions logictype="and">
+            <rendercondition type="blank" operator="!=" fieldmodel="Contact" sourcetype="fieldvalue" nosourcerowbehavior="deactivate" field="Profile_Picture__c" value="null" enclosevalueinquotes="false"/>
+         </renderconditions>
+      </template>
+      <basicfieldeditor showheader="true" showsavecancel="true" model="Contact" buttonposition="" mode="read" layout="">
+         <columns>
+            <column width="100%">
+               <sections>
+                  <section title="Contact Info" collapsible="no">
+                     <fields>
+                        <field id="FirstName" valuehalign="" type=""/>
+                        <field id="LastName" valuehalign="" type=""/>
+                        <field id="Email" valuehalign="" type=""/>
+                        <field id="Profile_Picture__c" valuehalign="" type="">
+                           <label>Profile Picture URL</label>
+                           <renderconditions logictype="and" onhidedatabehavior="keep"/>
+                        </field>
+                     </fields>
+                  </section>
+               </sections>
+               <renderconditions logictype="and"/>
+            </column>
+         </columns>
+         <renderconditions logictype="and"/>
+      </basicfieldeditor>
+   </components>
+   <resources>
+      <labels/>
+      <css/>
+      <javascript>
+         <jsitem location="inlinesnippet" name="getGravatarJsRemote" cachelocation="false">
+//get contact Data
+var contactModel = skuid.model.getModel('Contact');
+var contact = contactModel.data[0];
+
+//block UI
+skuid.jQuery.blockUI({message: 'Loading Photo...'});
+
+//call remote action.  Pass in contact Id
+DF_RemoteActionDemo.getGravatar(contact.Id, function(response, event) {
+    if (event.type == 'exception') {
+        //display error
+        skuid.jQuery.unblockUI();
+        alert(event.message);
+
+    }else{
+        // update model
+        contactModel.updateRow(contact, {"Profile_Picture__c": response});
+        skuid.model.save([contactModel],{
+            callback: function(result){
+                skuid.jQuery.unblockUI();
+            }
+        });     
+    }
+});
+
+
+
+ 
+
+
+    </jsitem>
+         <jsitem location="inlinesnippet" name="getGravatarSOAP" cachelocation="false">
+var $ = skuid.$;
+//get contact Data
+var contactModel = skuid.model.getModel('Contact');
+var contact = contactModel.data[0];
+
+skuid.jQuery.blockUI({message: 'Loading Photo...'});
+//block UI
+try{
+    var response = sforce.apex.execute('DF_WebserviceDemo', 'getGravatar', {contactId: contact.Id});
+    // update model
+    contactModel.updateRow(contact, {"Profile_Picture__c": response[0]});
+    skuid.model.save([contactModel],{
+        callback: function(result){
+            skuid.jQuery.unblockUI();
+        }
+    });   
+}catch(e){
+    skuid.jQuery.unblockUI();
+    alert(e);
+}
+
+ 
+
+
+
+
+
+ 
+
+
+    </jsitem>
+         <jsitem location="inlinesnippet" name="getGravatarInvocable" cachelocation="false">
+var $ = skuid.$;
+//get contact Data
+var contactModel = skuid.model.getModel('Contact');
+var contact = contactModel.data[0];
+
+var request = {
+ inputs : [ {
+        contactIds : contact.Id
+        }
+    ]
+}
+
+//block UI
+skuid.jQuery.blockUI({message: 'Loading Photo...'});
+
+ $.ajax('/services/data/v34.0/actions/custom/apex/DF_InvocableDemo', {
+        data: JSON.stringify(request),
+        type: 'POST',
+        //crossDomain: true,
+        //dataType: "json",
+        beforeSend: function(xhr) {
+            xhr.setRequestHeader('Authorization', 'Bearer ' + sforce.connection.sessionId);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+        },
+        success: function(response) {
+            var gravatarUrl = response[0].outputValues.output;
+            contactModel.updateRow(contact, {"Profile_Picture__c": gravatarUrl});
+            skuid.model.save([contactModel],{
+            callback: function(result){
+                skuid.jQuery.unblockUI();
+            }
+    });   
+            //skuid.model.updateData([contactModel],function(){
+            //    skuid.jQuery.unblockUI();
+            //}); 
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.log([jqXHR, textStatus, errorThrown]);
+            skuid.jQuery.unblockUI();
+            alert(textStatus);
+        }
+    });
+    </jsitem>
+         <jsitem location="inlinesnippet" name="getGravatarREST" cachelocation="false">//get contact Data
+var contactModel = skuid.model.getModel('Contact');
+var contact = contactModel.data[0];
+
+//block UI
+skuid.jQuery.blockUI({message: 'Loading Photo...'});
+
+var request = {contactId:contact.Id};
+sforce.connection.remoteFunction({
+        url : "https://na34.salesforce.com/services/apexrest/demo/",
+        requestData: JSON.stringify(request),
+        method: "POST",
+        requestHeaders: {
+            "Content-Type":"application/json",
+            'Authorization': 'Bearer ' + sforce.connection.sessionId
+        },
+        onSuccess : function(response) {
+            //remove quotes
+            response = response.substring(1, response.length-1);
+            contactModel.updateRow(contact, {"Profile_Picture__c": response});
+            skuid.model.save([contactModel],{
+                callback: function(result){
+                    skuid.jQuery.unblockUI();
+                }
+            });     
+        },
+        onFailure : function(response) {
+            console.log(response);
+            skuid.jQuery.unblockUI();
+            alert(response);
+        }
+    });
+</jsitem>
+         <jsitem location="external" name="Ajax Toolkit" cachelocation="false" url="/soap/ajax/33.0/apex.js">var params = arguments[0],
+    $ = skuid.$;
+</jsitem>
+      </javascript>
+   </resources>
+</skuidpage>
